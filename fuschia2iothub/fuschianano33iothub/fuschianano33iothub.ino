@@ -35,7 +35,8 @@ float accelX, accelY, accelZ, // units m/s/s i.e. accelZ if often 9.8 (gravity)
 long lastTime;
 long lastInterval;
 unsigned long currentTime;
-char data[4000];
+char data[200];
+int counter = 0;
 
 
 //=========================================================================================
@@ -95,12 +96,12 @@ void publishMessage() {
 
   StaticJsonDocument<capacity> doc;
   int userId = 9;
-  String date = "2022-02-15";
-  String exercise = "live data";
-  sprintf(data, "%f", calibrateRoll);
-//  Serial.printf(%s, userId);
+  String date = "2022-02-24";
+  String exercise = "sendingMore than one";
+//  sprintf(data, "%f", calibrateRoll);
+  Serial.print(data);
   doc["userId"] = userId;
-  doc["workoutDate"] = date;
+  doc["workoutDate"] = date;  
   doc["exercise"] = exercise;
   doc["data"] = data;
 
@@ -120,7 +121,9 @@ void publishMessage() {
   mqttClient.beginMessage("devices/" + deviceId + "/messages/events/", static_cast<unsigned long>(payloadSize));
   mqttClient.print(payload);
   mqttClient.endMessage();
+  Serial.println("Test");
   /*
+  
     To replicate the issue, uncomment the following 3 lines and comment the 3 above. This way you'll only be able to send MQTT messages smaller than 256 Bytes.
   */
   //  mqttClient.beginMessage("devices/" + deviceId + "/messages/events/");
@@ -212,9 +215,16 @@ void doCalculations() {
   calibrateRoll = complementaryRoll + 90;
   Serial.print(calibrateRoll);
   Serial.println("");
-  char cali[7];
-  sprintf(cali, "%f", calibrateRoll);//make the number into string using sprintf function
-  strcat(data, cali);
+  if(counter < 100){
+    char cali[6];
+    sprintf(cali, "%f", calibrateRoll);//make the number into string using sprintf function
+    Serial.println(cali);
+    strcat(data, cali);
+    strcat(data, " ");
+    counter++;
+    Serial.println("HI!");
+    
+  }
 }
 
 //=========================================================================================
@@ -292,6 +302,6 @@ void loop() {
   mqttClient.poll();
 
   publishMessage();
-
+  delay(2000);
   //delay(10000); //  publish a message roughly every 10 seconds
 }
