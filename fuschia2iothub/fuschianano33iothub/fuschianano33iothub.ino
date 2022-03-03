@@ -35,8 +35,9 @@ float accelX, accelY, accelZ, // units m/s/s i.e. accelZ if often 9.8 (gravity)
 long lastTime;
 long lastInterval;
 unsigned long currentTime;
-char data[350];
+char data[80];
 int counter = 0;
+float toSend[10];
 
 
 //=========================================================================================
@@ -86,7 +87,30 @@ void connectMQTT() {
   Serial.println();
 
   // subscribe to a topic
+  const int capacity = JSON_ARRAY_SIZE(10) + 10 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 280;
+  StaticJsonDocument<capacity> doc;
+  int userId = 11;
+  String date = "2022-03-02";
+  String exercise = "Start";
+//  Serial.println(data);
+  //  String exercise = "Snow Angel"
+  //  sprintf(data, "%f", calibrateRoll);
+  doc["userId"] = userId;
+  doc["workoutDate"] = date;
+  doc["exercise"] = exercise;
+  doc["data"] = calibrateRoll;
   mqttClient.subscribe("devices/" + deviceId + "/messages/devicebound/#");
+   char payload[1024]; // length of the char buffer that contains the JSON file, concretely the number of characters included in one message
+  size_t payloadSize = serializeJson(doc, payload);
+
+  //   DEBUG - write the size of the serialized document
+  Serial.print("json size:");
+  Serial.println(payloadSize);
+
+  // send message, the Print interface can be used to set the message contents
+  mqttClient.beginMessage("devices/" + deviceId + "/messages/events/", static_cast<unsigned long>(payloadSize));
+  mqttClient.print(payload);
+  mqttClient.endMessage();
 }
 
 
@@ -95,17 +119,17 @@ void publishMessage() {
   const int capacity = JSON_ARRAY_SIZE(10) + 10 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 280;  // Calculation of the JSON doc size, as explained in the documentation
 
   StaticJsonDocument<capacity> doc;
-  int userId = 10;
-  String date = "2022-02-26";
+  int userId = 11;
+  String date = "2022-03-02";
   char exercise[20];
   sprintf(exercise, "%f", getTime());
-  Serial.println(data);
+//  Serial.println(data);
   //  String exercise = "Snow Angel"
   //  sprintf(data, "%f", calibrateRoll);
-  doc["userId"] = counter;
+  doc["userId"] = userId;
   doc["workoutDate"] = date;
   doc["exercise"] = exercise;
-  doc["data"] = data;
+  doc["data"] = calibrateRoll;
 
 
   //   DEBUG - serialize the document in the serial monitor
@@ -184,6 +208,7 @@ bool readIMU() {
   but as of 1.0.0 this was missing.
 */
 void doCalculations() {
+
   accRoll = atan2(accelY, accelZ) * 180 / M_PI;
   accPitch = atan2(-accelX, sqrt(accelY * accelY + accelZ * accelZ)) * 180 / M_PI;
 
@@ -217,12 +242,12 @@ void doCalculations() {
   calibrateRoll = complementaryRoll + 90;
   Serial.print(calibrateRoll);
   Serial.println("");
-  char cali[6];
-  sprintf(cali, "%.2f", calibrateRoll);//make the number into string using sprintf function
-  Serial.print(" Cali: ");
-  Serial.println(cali);
-  strcat(data, cali);
-  strcat(data, " ");
+//  char cali[8];
+//  sprintf(cali, "%.2f ", calibrateRoll);//make the number into string using sprintf function
+//  Serial.print("Cali: ");
+//  Serial.println(cali);
+//  strcat(data, cali);
+//  toSend[counter] = calibrateRoll;
   counter++;
 }
 
@@ -300,10 +325,10 @@ void loop() {
   }
   mqttClient.poll();
   Serial.println("Polling, Counter: " + counter);
-  if (counter == 50) {
-    counter == 0;
-    publishMessage();
-    memset(data,'\0',350);
-  }
-  delay(100); //  publish a message roughly every 10 seconds
+//  if (counter == 10) {
+//    counter == 0;
+  publishMessage();
+//    memset(data,'\0',80);
+//  }
+  delay(333); //  publish a message roughly every 10 seconds
 }
