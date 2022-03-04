@@ -31,6 +31,7 @@ def send_batch_message(sender):
 
 def handle_recieved_message(msg):
 
+
 servicebus_client = ServiceBusClient.from_connection_string(conn_str=CONNECTION_STR, logging_enable=True)
 
 with servicebus_client:
@@ -51,3 +52,15 @@ with servicebus_client:
             d = json.loads(str(msg))
             print(d["userId"], d["data"])
             receiver.complete_message(msg)
+
+
+"""
+Idea here is to read through the serviceBusQueue. Messages with the exercise as 'Start' will signify the start of new exercises.
+For now im assuming the message queue will be used only be one device at a time. These means we can combined all messages together
+until we see a new start message.
+
+Best way to do so is when started a json file/object is created from the first message. Data from each subsequent message should be
+appended to that object.
+Either at the end of all the messages or during the whole thing, this should be written to a file. The file title can be created from
+userId + exercise + date. Perhaps the contents should just be the data? As i believe thats all that is required for the ML 
+"""
