@@ -10,17 +10,17 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
 
-const char broker[]      = SECRET_BROKER;
-String     deviceId  =  SECRET_DEVICE_ID;  // Device ID if ECCX08 certificate
-
-#define ECCX08_CERTIFICATE
-
-WiFiClient    wifiClient;            // Used for the TCP socket connection
-BearSSLClient sslClient(wifiClient); // Used for SSL/TLS connection, integrates with ECC508
-MqttClient    mqttClient(sslClient);
-
-const char ssid[]        = SECRET_WIFI_SSID;
-const char pass[]        = SECRET_WIFI_PASS;
+//const char broker[]      = SECRET_BROKER;
+//String     deviceId  =  SECRET_DEVICE_ID;  // Device ID if ECCX08 certificate
+//
+//#define ECCX08_CERTIFICATE
+//
+//WiFiClient    wifiClient;            // Used for the TCP socket connection
+//BearSSLClient sslClient(wifiClient); // Used for SSL/TLS connection, integrates with ECC508
+//MqttClient    mqttClient(sslClient);
+//
+//const char ssid[]        = SECRET_WIFI_SSID;
+//const char pass[]        = SECRET_WIFI_PASS;
 
 float accelX, accelY, accelZ, // units m/s/s i.e. accelZ if often 9.8 (gravity)
       gyroX, gyroY, gyroZ, // units dps (degrees per second)
@@ -35,112 +35,6 @@ float accelX, accelY, accelZ, // units m/s/s i.e. accelZ if often 9.8 (gravity)
 long lastTime;
 long lastInterval;
 unsigned long currentTime;
-char data[350];
-int counter = 0;
-
-
-//=========================================================================================
-
-
-// get the current time from the WiFi module
-unsigned long getTime() {
-  return WiFi.getTime();
-}
-
-//Connect to Wifi
-void connectWiFi() {
-  Serial.print("Attempting to connect to SSID: ");
-  Serial.print(ssid);
-  Serial.print(" ");
-
-  while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
-    // failed, retry
-    Serial.print(".");
-    delay(5000);
-  }
-  Serial.println();
-
-  Serial.println("You're connected to the network");
-  Serial.println();
-}
-
-/*
-   Establishses connection with the MQTT Broker (IoT Hub)
-   Some errors you may receive:
-   -- (-.2) Either a connectivity error or an error in the url of the broker
-   -- (-.5) Check credentials - has the SAS Token expired? Do you have the right connection string copied into arduino_secrets?
-*/
-void connectMQTT() {
-  Serial.print("Attempting to MQTT broker: ");
-  Serial.print(broker);
-  Serial.println(" ");
-
-  while (!mqttClient.connect(broker, 8883)) {
-    // failed, retry
-    Serial.print(".");
-    Serial.println(mqttClient.connectError());
-    delay(5000);
-  }
-  Serial.println();
-
-  Serial.println("You're connected to the MQTT broker");
-  Serial.println();
-
-  // subscribe to a topic
-  mqttClient.subscribe("devices/" + deviceId + "/messages/devicebound/#");
-}
-
-/*
- * Sends message to Azure iot hub
- * Payload size is based on size of json object being sent
- * Our size is userId ~ 14 bytes
- * date ~ 37 byes
- * exercise = 15 bytes + length of word
- * data = 9*number of captures 
- */
-void publishMessage() {
-  Serial.println("Publishing message");
-  const int capacity = JSON_ARRAY_SIZE(10) + 10 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 280;  // Calculation of the JSON doc size, as explained in the documentation
-
-  StaticJsonDocument<capacity> doc;
-  int userId = 10;
-  String date = "2022-02-26";
-  char exercise[20];
-  sprintf(exercise, "%f", getTime());
-  Serial.println(data);
-  //  String exercise = "Snow Angel"
-  //  sprintf(data, "%f", calibrateRoll);
-  doc["userId"] = counter;
-  doc["workoutDate"] = date;
-  doc["exercise"] = exercise;
-  doc["data"] = data;
-
-
-  //   DEBUG - serialize the document in the serial monitor
-  //   serializeJson(doc, Serial);
-  //   Serial.println(" ");
-
-  char payload[1024]; // length of the char buffer that contains the JSON file, concretely the number of characters included in one message
-  size_t payloadSize = serializeJson(doc, payload);
-
-  //   DEBUG - write the size of the serialized document
-  Serial.print("json size:");
-  Serial.println(payloadSize);
-
-  // send message, the Print interface can be used to set the message contents
-  mqttClient.beginMessage("devices/" + deviceId + "/messages/events/", static_cast<unsigned long>(payloadSize));
-  mqttClient.print(payload);
-  mqttClient.endMessage();
-  /*
-
-    To replicate the issue, uncomment the following 3 lines and comment the 3 above. This way you'll only be able to send MQTT messages smaller than 256 Bytes.
-  */
-  //  mqttClient.beginMessage("devices/" + deviceId + "/messages/events/");
-  //  serializeJson(doc, mqttClient);
-  //  mqttClient.endMessage();
-
-}
-
 
 //===================================================================================
 //Accel data functions
@@ -217,15 +111,9 @@ void doCalculations() {
 
 
   calibrateRoll = complementaryRoll + 90;
+  Serial.print(" ");
   Serial.print(calibrateRoll);
-  Serial.println("");
-  char cali[6];
-  sprintf(cali, "%.2f", calibrateRoll);//make the number into string using sprintf function
-  Serial.print(" Cali: ");
-  Serial.println(cali);
-  strcat(data, cali);
-  strcat(data, " ");
-  counter++;
+  Serial.print("\n");
 }
 
 //=========================================================================================
@@ -234,7 +122,7 @@ void doCalculations() {
 void setup() {
 
   Serial.begin(9600);
-
+/*
   pinMode(10, OUTPUT);
   if (!ECCX08.begin()) {
     Serial.println("No ECCX08 present!"); // If no ECCX08 certificate is present, generate one using the "ECCX08SelfSignedCert.ino" sketch from the library examples
@@ -266,7 +154,8 @@ void setup() {
   username += deviceId;
   username += "/api-version=2018-06-30";
   mqttClient.setUsernamePassword(username, "");
-
+  
+*/
 
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
@@ -279,7 +168,7 @@ void setup() {
 //=========================================================================================
 
 void loop() {
-
+/*
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
   }
@@ -288,7 +177,7 @@ void loop() {
     // MQTT client is disconnected, connect
     connectMQTT();
   }
-
+*/
   // poll for new MQTT messages and send keep alives
   if (readIMU()) {
     Serial.print("Reading IMU");
@@ -298,6 +187,7 @@ void loop() {
 
     doCalculations();
   }
+/*
   mqttClient.poll();
   Serial.println("Polling, Counter: " + counter);
   if (counter == 50) {
@@ -306,4 +196,5 @@ void loop() {
     memset(data,'\0',350);
   }
   delay(100); //  stop for .1 seconds
+ */
 }
