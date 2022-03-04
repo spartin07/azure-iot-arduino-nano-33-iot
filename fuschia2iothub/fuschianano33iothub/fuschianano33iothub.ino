@@ -47,6 +47,7 @@ unsigned long getTime() {
   return WiFi.getTime();
 }
 
+//Connect to Wifi
 void connectWiFi() {
   Serial.print("Attempting to connect to SSID: ");
   Serial.print(ssid);
@@ -89,7 +90,14 @@ void connectMQTT() {
   mqttClient.subscribe("devices/" + deviceId + "/messages/devicebound/#");
 }
 
-
+/*
+ * Sends message to Azure iot hub
+ * Payload size is based on size of json object being sent
+ * Our size is userId ~ 14 bytes
+ * date ~ 37 byes
+ * exercise = 15 bytes + length of word
+ * data = 9*number of captures 
+ */
 void publishMessage() {
   Serial.println("Publishing message");
   const int capacity = JSON_ARRAY_SIZE(10) + 10 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 280;  // Calculation of the JSON doc size, as explained in the documentation
@@ -136,6 +144,7 @@ void publishMessage() {
 
 //===================================================================================
 //Accel data functions
+
 /*
   the gyro's x,y,z values drift by a steady amount. if we measure this when arduino is still
   we can correct the drift when doing real measurements later
@@ -187,15 +196,8 @@ void doCalculations() {
   accRoll = atan2(accelY, accelZ) * 180 / M_PI;
   accPitch = atan2(-accelX, sqrt(accelY * accelY + accelZ * accelZ)) * 180 / M_PI;
 
-
-
   lastFrequency = 1000000.0 / lastInterval;
 
-
-  //  Serial.print(" LF: ");
-  //  Serial.print(lastFrequency);
-  //  Serial.print(" LI: ");
-  //  Serial.print(lastInterval);
   gyroRoll = gyroRoll + (gyroX / lastFrequency);
   gyroPitch = gyroPitch + (gyroY / lastFrequency);
   gyroYaw = gyroYaw + (gyroZ / lastFrequency);
@@ -294,8 +296,6 @@ void loop() {
     lastInterval = currentTime - lastTime; // expecting this to be ~104Hz +- 4%
     lastTime = currentTime;
 
-
-
     doCalculations();
   }
   mqttClient.poll();
@@ -305,5 +305,5 @@ void loop() {
     publishMessage();
     memset(data,'\0',350);
   }
-  delay(100); //  publish a message roughly every 10 seconds
+  delay(100); //  stop for .1 seconds
 }
