@@ -1,13 +1,21 @@
-# import os
+import os
 import json
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 CONNECTION_STR = "Endpoint=sb://fuschiaband.servicebus.windows.net/;SharedAccessKeyName=iothubroutes_fuschiaband;SharedAccessKey=mLF+WqZvkMxNXaVTqHmPrchyRGQNjvUWAEPpIVYmFds=;EntityPath=dataqueue"
 QUEUE_NAME = "dataqueue"
 
+def dirSetup():
+    path = os.path.join(os.getcwd(), 'processed')
+    print(os.path.isdir(path))
+    if not (os.path.isdir(path)):
+        os.mkdir(path)
+    else:
+        print("Processed folder already exists")
+
 #Sends a single message to the serviceBusQueue
 def send_single_message(sender):
-    message = ServiceBusMessage("{\"userId\":9,\"workoutDate\":\"2022-02-24\",\"exercise\":\"sending from python\",\"data\":\"80.81420180.24949679.94495481.54075681.937263135.547379133.213654126.571320124.666946123.524231122.343903121.247246120.231239119.237625118.262039117.183983116.126862\"}")
+    message = ServiceBusMessage("{\"userId\":9,\"workoutDate\":\"2022-02-24\",\"exercise\":\"sending from python\",\"data\":\"begin: 80.814201, 80.24949679.944954, 81.540756, 81.9372631, 35.5473791, 33.2136541, 26.5713201, 24.6669461, 23.5242311, 22.3439031, 21.2472461, 20.2312391, 19.2376251, 18.2620391, 17.1839831, 16.126862\"}")
     sender.send_messages(message)
     print("Sent a single message")
 
@@ -30,8 +38,29 @@ def send_batch_message(sender):
 
 
 def handle_recieved_message(msg):
+    print("Received: " + str(msg))
+    dic = json.loads(str(msg))
+    print(dic["userId"], dic["data"])
+    path = os.path.join(os.getcwd(), 'processed')
+    if(dic["exercise"] == "start"):
+        path = os.path.join(os.getcwd(), 'processed')
+    else:
+        fileName = str(dic["userId"]) + '-' + dic["workoutDate"] + '-' + dic["exercise"] +".txt"
+        path = os.path.join(os.getcwd(), 'processed', fileName)
+        print(fileName)
+        if(os.path.isfile(path)):
+            print("appending")
+            file = open(path, "a")
+            file.write(dic["data"])
+            file.close
+        else:
+            print("writing")
+            file = open(path, "w")
+            file.write(dic["data"])
+            file.close
 
 
+dirSetup()
 servicebus_client = ServiceBusClient.from_connection_string(conn_str=CONNECTION_STR, logging_enable=True)
 
 with servicebus_client:
@@ -44,13 +73,13 @@ with servicebus_client:
 # print("Done sending messages")
 # print("-----------------------")
 
+
+
 with servicebus_client:
     receiver = servicebus_client.get_queue_receiver(queue_name=QUEUE_NAME, max_wait_time=5)
     with receiver:
         for msg in receiver:
-            print("Received: " + str(msg))
-            d = json.loads(str(msg))
-            print(d["userId"], d["data"])
+            handle_recieved_message(msg)
             receiver.complete_message(msg)
 
 
@@ -62,5 +91,5 @@ until we see a new start message.
 Best way to do so is when started a json file/object is created from the first message. Data from each subsequent message should be
 appended to that object.
 Either at the end of all the messages or during the whole thing, this should be written to a file. The file title can be created from
-userId + exercise + date. Perhaps the contents should just be the data? As i believe thats all that is required for the ML 
+userId + exercise + date. Perhaps the contents should just be the data? As i believe thats all that is required for the ML
 """
